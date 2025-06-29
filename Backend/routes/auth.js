@@ -125,4 +125,19 @@ router.post('/login', validateLogin, async (req, res) => {
   }
 });
 
+// Debug endpoint to check current user (protected)
+router.get('/me', require('../middleware/auth').auth, async (req, res) => {
+  try {
+    res.json({
+      user: req.user,
+      userId: req.user.userId,
+      role: req.user.role,
+      message: 'Authentication successful'
+    });
+  } catch (err) {
+    console.error('Debug auth error:', err);
+    res.status(500).json({ msg: 'Server error' });
+  }
+});
+
 module.exports = router;

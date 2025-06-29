@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { ArrowLeft, Users, Wifi, WifiOff, Settings, Edit3, Menu, Crown } from 'lucide-react';
+import { ArrowLeft, Users, Wifi, WifiOff, Settings, Edit3, Menu, Crown, Trash2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { API_ENDPOINTS } from '@/lib/api';
+import api from '@/lib/api';
 
 const ChatHeader = ({
   roomName,
@@ -21,32 +22,28 @@ const ChatHeader = ({
   onCopyRoomCode,
   onSidebarToggle
 }) => {
-  const [editRoomDialogOpen, setEditRoomDialogOpen] = useState(false);
-  const [editRoomData, setEditRoomData] = useState({ _id: '', name: '', isPrivate: false });
   const [copySuccess, setCopySuccess] = useState('');
+  const [error, setError] = useState('');
   const navigate = useNavigate();
-
-  const handleEditRoom = () => {
-    setEditRoomData({ _id: roomCode, name: roomName, isPrivate: false });
-    setEditRoomDialogOpen(true);
-  };
-
-  const handleEditRoomSubmit = async () => {
-    try {
-      await onEditRoom(editRoomData);
-      setEditRoomDialogOpen(false);
-    } catch (error) {
-      console.error('Error editing room:', error);
-    }
-  };
 
   const handleCopyRoomCode = async () => {
     try {
-      await onCopyRoomCode();
+      await navigator.clipboard.writeText(roomCode);
       setCopySuccess('Room code copied!');
       setTimeout(() => setCopySuccess(''), 2000);
-    } catch (error) {
-      console.error('Error copying room code:', error);
+    } catch (err) {
+      setError('Failed to copy room code');
+    }
+  };
+
+  const handleDeleteRoom = async () => {
+    if (!window.confirm('Are you sure you want to delete this room? This action cannot be undone.')) return;
+    
+    try {
+      await api.delete(API_ENDPOINTS.ROOMS.DELETE(roomCode));
+      navigate('/');
+    } catch (err) {
+      setError('Failed to delete room');
     }
   };
 
@@ -137,10 +134,10 @@ const ChatHeader = ({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={handleEditRoom}
+                  onClick={handleDeleteRoom}
                   className="text-gray-200 hover:text-white hover:bg-blue-500/20 transition-all duration-200 h-9 w-9 sm:h-10 sm:w-10"
                 >
-                  <Edit3 className="w-4 h-4" />
+                  <Trash2 className="w-4 h-4" />
                 </Button>
               </motion.div>
             )}
@@ -162,45 +159,6 @@ const ChatHeader = ({
           </motion.div>
         )}
       </motion.div>
-
-      {/* Edit Room Dialog */}
-      <Dialog open={editRoomDialogOpen} onOpenChange={setEditRoomDialogOpen}>
-        <DialogContent className="bg-black/95 backdrop-blur-xl border-blue-900/50 shadow-2xl max-w-sm mx-4">
-          <DialogHeader>
-            <DialogTitle className="text-white text-lg font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
-              Edit Room
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Input
-              value={editRoomData.name}
-              onChange={e => setEditRoomData({ ...editRoomData, name: e.target.value })}
-              className="bg-blue-900/20 border-blue-700/50 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500/50 transition-all duration-200"
-              placeholder="Room name"
-            />
-            <label className="flex items-center gap-2 text-white">
-              <input
-                type="checkbox"
-                checked={editRoomData.isPrivate}
-                onChange={e => setEditRoomData({ ...editRoomData, isPrivate: e.target.checked })}
-              />
-              Private Room
-            </label>
-            <div className="flex gap-2">
-              <Button onClick={handleEditRoomSubmit} className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-all duration-200">
-                Save
-              </Button>
-              <Button 
-                variant="outline" 
-                className="bg-black/40 border-blue-700/50 text-white hover:bg-blue-500/20 transition-all duration-200" 
-                onClick={() => setEditRoomDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </>
   );
 };

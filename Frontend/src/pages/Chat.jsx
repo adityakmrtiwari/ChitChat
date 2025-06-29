@@ -39,9 +39,6 @@ import ChatHeader from '../components/ChatHeader';
 import EmojiPicker from '../components/EmojiPicker';
 import Footer from '../components/Footer';
 
-// Socket URL from environment variable
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:8000';
-
 const Chat = () => {
   const { roomId } = useParams();
   const [messages, setMessages] = useState([]);
@@ -79,10 +76,8 @@ const Chat = () => {
     if (!messageContent.trim()) return;
 
     try {
-      const response = await axios.post(`${SOCKET_URL}/api/messages/${roomId}`, {
+      const response = await api.post(API_ENDPOINTS.MESSAGES.CREATE(roomId), {
         content: messageContent
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
 
       // Add the message to the local state immediately
@@ -111,9 +106,7 @@ const Chat = () => {
   // Handle remove user
   const removeUser = async (userId) => {
     try {
-      await axios.delete(`${SOCKET_URL}/api/rooms/${roomId}/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(API_ENDPOINTS.ROOMS.REMOVE_USER(roomId, userId));
       socketRef.current.emit('removeUser', { roomId, userId });
     } catch (err) {
       setError('Failed to remove user');
@@ -123,9 +116,7 @@ const Chat = () => {
   // Handle edit room
   const handleEditRoom = async (roomData) => {
     try {
-      await axios.put(`${SOCKET_URL}/api/rooms/${roomId}`, roomData, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put(API_ENDPOINTS.ROOMS.UPDATE(roomId), roomData);
       setRoomName(roomData.name);
       socketRef.current.emit('roomUpdated', { roomId, roomData });
     } catch (err) {
@@ -151,9 +142,7 @@ const Chat = () => {
     
     const fetchData = async () => {
       try {
-        const roomRes = await axios.get(`${SOCKET_URL}/api/rooms/${roomId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const roomRes = await api.get(API_ENDPOINTS.ROOMS.GET(roomId));
         const room = roomRes.data;
         setRoomName(room.name);
         setRoomOwner(room.createdBy._id || room.createdBy);
@@ -161,9 +150,7 @@ const Chat = () => {
         setUsers(room.users || []);
         setRoomCode(room.roomCode);
         
-        const messagesRes = await axios.get(`${SOCKET_URL}/api/messages/${roomId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const messagesRes = await api.get(API_ENDPOINTS.MESSAGES.GET(roomId));
         setMessages(messagesRes.data);
       } catch (err) {
         setError('Failed to fetch room data');
@@ -179,29 +166,30 @@ const Chat = () => {
   useEffect(() => {
     if (!user?.userId || !roomId) return;
 
-    socketRef.current = io(SOCKET_URL);
+    const socket = socketManager.connect(user.userId);
+    socketRef.current = socket;
     
     // Connection status handling
-    socketRef.current.on('connect', () => {
+    socket.on('connect', () => {
       setIsConnected(true);
       setError('');
     });
 
-    socketRef.current.on('disconnect', () => {
+    socket.on('disconnect', () => {
       setIsConnected(false);
       setError('Connection lost. Trying to reconnect...');
     });
 
-    socketRef.current.on('connect_error', () => {
+    socket.on('connect_error', () => {
       setIsConnected(false);
       setError('Failed to connect to server');
     });
     
-    socketRef.current.emit('joinRoom', { roomId, userId: user.userId });
-    socketRef.current.emit('storeUserId', { userId: user.userId });
+    socket.emit('joinRoom', { roomId, userId: user.userId });
+    socket.emit('storeUserId', { userId: user.userId });
 
     // Message events
-    socketRef.current.on('newMessage', (msg) => {
+    socket.on('newMessage', (msg) => {
       setMessages((prev) => [...prev, msg]);
       if (messagesContainerRef.current) {
         const { scrollTop, scrollHeight, clientHeight } = messagesContainerRef.current;
@@ -213,7 +201,7 @@ const Chat = () => {
     });
 
     // Typing events
-    socketRef.current.on('typing', ({ userId, username }) => {
+    socket.on('typing', ({ userId, username }) => {
       if (userId !== user.userId) {
         setTypingUsers((prev) => {
           if (!prev.some(u => u.id === userId)) {
@@ -224,12 +212,12 @@ const Chat = () => {
       }
     });
 
-    socketRef.current.on('stopTyping', ({ userId }) => {
+    socket.on('stopTyping', ({ userId }) => {
       setTypingUsers((prev) => prev.filter((u) => u.id !== userId));
     });
 
     // User events
-    socketRef.current.on('userJoined', ({ userId, username }) => {
+    socket.on('userJoined', ({ userId, username }) => {
       setUsers(prev => {
         if (!prev.find(u => u._id === userId)) {
           return [...prev, { _id: userId, username }];
@@ -240,21 +228,21 @@ const Chat = () => {
       setTimeout(() => setToast(''), 2000);
     });
 
-    socketRef.current.on('userLeft', ({ userId, username }) => {
+    socket.on('userLeft', ({ userId, username }) => {
       setUsers(prev => prev.filter(u => u._id !== userId));
       setToast(`${username} left the room`);
       setTimeout(() => setToast(''), 2000);
     });
 
-    socketRef.current.on('userList', (onlineUserIds) => {
+    socket.on('userList', (onlineUserIds) => {
       setOnlineUsers(onlineUserIds);
     });
 
-    socketRef.current.on('roomUsers', (userList) => {
+    socket.on('roomUsers', (userList) => {
       setUsers(userList);
     });
 
-    socketRef.current.on('userRemoved', ({ userId }) => {
+    socket.on('userRemoved', ({ userId }) => {
       if (userId === user.userId) {
         navigate('/');
       } else {
@@ -263,7 +251,7 @@ const Chat = () => {
     });
 
     // Reaction events
-    socketRef.current.on('reaction', ({ messageId, userId, reaction }) => {
+    socket.on('reaction', ({ messageId, userId, reaction }) => {
       setMessages(prev => prev.map(msg => 
         msg._id === messageId 
           ? { ...msg, reactions: { ...msg.reactions, [userId]: reaction } }

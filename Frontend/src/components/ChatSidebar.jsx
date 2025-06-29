@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Users, Copy, Crown, Wifi, WifiOff, Settings, Edit3, Menu, Search, X, Trash2 } from 'lucide-react';
+import { Users, Copy, Crown, Wifi, WifiOff, Settings, Edit3, Menu, Search, Trash2, Check } from 'lucide-react';
 
 const ChatSidebar = ({
   isOpen,
@@ -23,6 +23,14 @@ const ChatSidebar = ({
   onCopyRoomCode
 }) => {
   const [searchUsers, setSearchUsers] = useState('');
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editRoomName, setEditRoomName] = useState(roomName);
+
+  // Update editRoomName when roomName prop changes (for real-time updates)
+  useEffect(() => {
+    setEditRoomName(roomName);
+  }, [roomName]);
 
   const filteredUsers = users.filter(user =>
     user.username?.toLowerCase().includes(searchUsers.toLowerCase())
@@ -32,9 +40,61 @@ const ChatSidebar = ({
     return isAdmin || currentUserId === roomOwner;
   };
 
-  const removeUser = async (userId) => {
+  const handleRemoveUser = async (userId) => {
     if (canRemoveUser(userId)) {
-      onRemoveUser(userId);
+      const userToRemove = users.find(u => u._id === userId);
+      const userName = userToRemove?.username || 'this user';
+      
+      if (window.confirm(`Are you sure you want to remove ${userName} from the room?`)) {
+        try {
+          await onRemoveUser(userId);
+        } catch (err) {
+          // Error handling is done in the parent component
+        }
+      }
+    }
+  };
+
+  const handleEditRoom = () => {
+    setIsEditing(true);
+    setEditRoomName(roomName);
+  };
+
+  const handleSaveEdit = async () => {
+    if (editRoomName.trim() && editRoomName !== roomName) {
+      try {
+        await onEditRoom({ name: editRoomName.trim() });
+        setIsEditing(false);
+      } catch (err) {
+        // Error handling is done in the parent component
+      }
+    } else {
+      setIsEditing(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditRoomName(roomName);
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      handleSaveEdit();
+    } else if (e.key === 'Escape') {
+      handleCancelEdit();
+    }
+  };
+
+  const handleCopyRoomCode = async () => {
+    try {
+      await navigator.clipboard.writeText(roomCode);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+      // Call the parent function to show success message
+      onCopyRoomCode();
+    } catch (err) {
+      // Silent fail for copying - parent component handles error display
     }
   };
 
@@ -44,18 +104,10 @@ const ChatSidebar = ({
         side="right" 
         className="bg-black/95 backdrop-blur-xl border-l border-blue-900/50 w-full sm:w-80 md:w-96 p-0"
       >
-        <SheetHeader className="border-b border-blue-900/50 p-4 sm:p-6 flex items-center justify-between">
+        <SheetHeader className="border-b border-blue-900/50 p-4 sm:p-6">
           <SheetTitle className="text-white text-lg sm:text-xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
             Room Info
           </SheetTitle>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="text-gray-400 hover:text-white hover:bg-blue-500/20 transition-all duration-200"
-          >
-            <X className="w-5 h-5" />
-          </Button>
         </SheetHeader>
 
         <div className="p-4 sm:p-6 space-y-6">
@@ -69,20 +121,50 @@ const ChatSidebar = ({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <h3 className="text-white font-semibold text-sm">Room Name</h3>
-                {(isAdmin || currentUserId === roomOwner) && (
+                {(isAdmin || currentUserId === roomOwner) && !isEditing && (
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={onEditRoom}
+                    onClick={handleEditRoom}
                     className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 transition-all duration-200"
                   >
                     <Edit3 className="w-4 h-4" />
                   </Button>
                 )}
               </div>
-              <div className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 p-3 sm:p-4 rounded-xl border border-blue-700/30 backdrop-blur-sm">
-                <p className="text-gray-200 text-sm font-medium">{roomName}</p>
-              </div>
+              {isEditing ? (
+                <div className="space-y-3">
+                  <Input
+                    value={editRoomName}
+                    onChange={(e) => setEditRoomName(e.target.value)}
+                    className="bg-blue-900/20 border-blue-700/50 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500/50 text-sm transition-all duration-200"
+                    placeholder="Room name"
+                    onKeyDown={handleKeyPress}
+                    autoFocus
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      onClick={handleSaveEdit}
+                      className="bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 transition-all duration-200"
+                    >
+                      Save
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleCancelEdit}
+                      className="border-white/20 text-white hover:bg-white/10 transition-all duration-200"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 p-3 sm:p-4 rounded-xl border border-blue-700/30 backdrop-blur-sm">
+                  <p className="text-gray-200 text-sm font-medium">{roomName}</p>
+                </div>
+              )}
             </div>
             
             <div className="space-y-3">
@@ -91,10 +173,14 @@ const ChatSidebar = ({
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={onCopyRoomCode}
-                  className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 transition-all duration-200"
+                  onClick={handleCopyRoomCode}
+                  className={`transition-all duration-200 ${
+                    copySuccess 
+                      ? 'text-green-400 hover:text-green-300 hover:bg-green-500/20' 
+                      : 'text-blue-400 hover:text-blue-300 hover:bg-blue-500/20'
+                  }`}
                 >
-                  <Copy className="w-4 h-4" />
+                  {copySuccess ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
                 </Button>
               </div>
               <div className="bg-gradient-to-r from-blue-900/20 to-purple-900/20 p-3 sm:p-4 rounded-xl border border-blue-700/30 backdrop-blur-sm">
@@ -188,7 +274,7 @@ const ChatSidebar = ({
                           </DropdownMenuTrigger>
                           <DropdownMenuContent className="bg-black/95 backdrop-blur-xl border border-blue-900/50 shadow-2xl">
                             <DropdownMenuItem
-                              onClick={() => removeUser(user._id)}
+                              onClick={() => handleRemoveUser(user._id)}
                               className="text-red-400 hover:text-red-300 hover:bg-red-500/20 cursor-pointer transition-all duration-200"
                             >
                               <Trash2 className="w-4 h-4 mr-2" />

@@ -1,7 +1,15 @@
 import { io } from 'socket.io-client';
 
-// Socket Configuration
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:8000';
+// Environment detection and Socket Configuration
+const isDevelopment = import.meta.env.DEV;
+const isProduction = import.meta.env.PROD;
+
+// Socket Configuration - environment-based
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL;
+
+if (!SOCKET_URL) {
+  console.error('VITE_SOCKET_URL environment variable is not set!');
+}
 
 class SocketManager {
   constructor() {

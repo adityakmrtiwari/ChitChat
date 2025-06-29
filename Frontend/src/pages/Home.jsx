@@ -59,15 +59,6 @@ const Home = () => {
     }
   }, [user]);
 
-  // Debug: Log API configuration (remove in production)
-  useEffect(() => {
-    console.log('API Configuration:', {
-      VITE_API_URL: import.meta.env.VITE_API_URL,
-      VITE_SOCKET_URL: import.meta.env.VITE_SOCKET_URL,
-      currentUser: user
-    });
-  }, [user]);
-
   const fetchRooms = async () => {
     if (!user) return;
     
@@ -173,7 +164,7 @@ const Home = () => {
         await navigator.clipboard.writeText(shareUrl);
       }
     } catch (err) {
-      console.error('Failed to share room');
+      // Silent fail for sharing
     }
   };
 

@@ -22,9 +22,11 @@ const MessageBubble = ({
   const handleCopyMessage = async () => {
     try {
       await navigator.clipboard.writeText(message.content);
-      // You can add a toast notification here
+      setCopySuccess('Message copied!');
+      setTimeout(() => setCopySuccess(''), 2000);
     } catch (err) {
-      console.error('Failed to copy message');
+      setCopySuccess('Failed to copy message');
+      setTimeout(() => setCopySuccess(''), 2000);
     }
   };
 

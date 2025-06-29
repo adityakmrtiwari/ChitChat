@@ -1,11 +1,19 @@
 import axios from 'axios';
 
-// API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+// Environment detection and API Configuration
+const isDevelopment = import.meta.env.DEV;
+const isProduction = import.meta.env.PROD;
+
+// API Configuration - environment-based
+const API_BASE_URL = import.meta.env.VITE_API_URL;
+
+if (!API_BASE_URL) {
+  console.error('VITE_API_URL environment variable is not set!');
+}
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: `${API_BASE_URL}/api`,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -43,28 +51,28 @@ api.interceptors.response.use(
 // API endpoints
 export const API_ENDPOINTS = {
   AUTH: {
-    LOGIN: '/api/auth/login',
-    REGISTER: '/api/auth/register',
+    LOGIN: '/auth/login',
+    REGISTER: '/auth/register',
   },
   ROOMS: {
-    LIST: '/api/rooms',
-    CREATE: '/api/rooms',
-    GET: (id) => `/api/rooms/${id}`,
-    JOIN: (id) => `/api/rooms/${id}/join`,
-    JOIN_BY_CODE: '/api/rooms/join-by-code',
-    DELETE: (id) => `/api/rooms/${id}`,
-    UPDATE: (id) => `/api/rooms/${id}`,
-    REMOVE_USER: (roomId, userId) => `/api/rooms/${roomId}/users/${userId}`,
+    LIST: '/rooms',
+    CREATE: '/rooms',
+    GET: (id) => `/rooms/${id}`,
+    JOIN: (id) => `/rooms/${id}/join`,
+    JOIN_BY_CODE: '/rooms/join-by-code',
+    DELETE: (id) => `/rooms/${id}`,
+    UPDATE: (id) => `/rooms/${id}`,
+    REMOVE_USER: (roomId, userId) => `/rooms/${roomId}/users/${userId}`,
   },
   MESSAGES: {
-    GET: (roomId) => `/api/messages/${roomId}`,
-    CREATE: (roomId) => `/api/messages/${roomId}`,
+    GET: (roomId) => `/messages/${roomId}`,
+    CREATE: (roomId) => `/messages/${roomId}`,
   },
   USERS: {
-    LIST: '/api/users',
-    GET: (id) => `/api/users/${id}`,
-    DELETE: (id) => `/api/users/${id}`,
-    UPDATE_ROLE: (id) => `/api/users/${id}/role`,
+    LIST: '/users',
+    GET: (id) => `/users/${id}`,
+    DELETE: (id) => `/users/${id}`,
+    UPDATE_ROLE: (id) => `/users/${id}/role`,
   },
 };
 

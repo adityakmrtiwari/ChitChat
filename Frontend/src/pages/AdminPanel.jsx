@@ -7,20 +7,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '../context/AuthContext';
 import dayjs from 'dayjs';
-import { Copy, Users, Crown, Trash2, MessageSquare } from 'lucide-react';
+import { Copy, Users, Crown, Trash2, MessageSquare, Edit, UserCheck, UserX, Shield, ShieldCheck } from 'lucide-react';
 import api, { API_ENDPOINTS } from '../lib/api';
 
 const AdminPanel = () => {
   const [rooms, setRooms] = useState([]);
   const [users, setUsers] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [activeTab, setActiveTab] = useState('rooms');
   const [copySuccess, setCopySuccess] = useState('');
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const navigate = useNavigate();
   const { user, logout } = useAuth();
 
@@ -54,7 +56,6 @@ const AdminPanel = () => {
     try {
       await api.delete(API_ENDPOINTS.ROOMS.DELETE(roomId));
       setRooms(prev => prev.filter(room => room._id !== roomId));
-      setDeleteConfirm(null);
     } catch (err) {
       setError('Failed to delete room');
     }
@@ -64,21 +65,27 @@ const AdminPanel = () => {
     if (!window.confirm('Are you sure you want to delete this user?')) return;
     
     try {
-      await api.delete(API_ENDPOINTS.USERS.DELETE(userId));
+      const response = await api.delete(API_ENDPOINTS.USERS.DELETE(userId));
       setUsers(prev => prev.filter(user => user._id !== userId));
     } catch (err) {
-      setError('Failed to delete user');
+      setError(err.response?.data?.msg || 'Failed to delete user');
     }
   };
 
   const handleUpdateUserRole = async (userId, newRole) => {
     try {
-      await api.patch(API_ENDPOINTS.USERS.UPDATE_ROLE(userId), { role: newRole });
+      const response = await api.patch(API_ENDPOINTS.USERS.UPDATE_ROLE(userId), { role: newRole });
+      
+      // Update local state
       setUsers(prev => prev.map(user => 
         user._id === userId ? { ...user, role: newRole } : user
       ));
+      
+      setSuccess('User role updated successfully');
+      setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
-      setError('Failed to update user role');
+      setError(err.response?.data?.msg || 'Failed to update user role');
+      setTimeout(() => setError(''), 5000);
     }
   };
 
@@ -147,6 +154,16 @@ const AdminPanel = () => {
               className="text-red-400 text-center badge-cyber border border-red-500/20 rounded-lg p-3 mb-6"
             >
               {error}
+            </motion.div>
+          )}
+
+          {success && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-green-400 text-center badge-cyber border border-green-500/20 rounded-lg p-3 mb-6"
+            >
+              {success}
             </motion.div>
           )}
 
@@ -258,7 +275,7 @@ const AdminPanel = () => {
                               </Button>
                               <Button
                                 size="sm"
-                                onClick={() => setDeleteConfirm(room)}
+                                onClick={() => handleDeleteRoom(room._id)}
                                 className="gradient-btn-danger"
                               >
                                 <Trash2 className="w-3 h-3" />
@@ -396,31 +413,6 @@ const AdminPanel = () => {
           </motion.div>
         </div>
       </main>
-      
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
-        <DialogContent className="bg-black/90 backdrop-blur-xl border border-white/20">
-          <DialogHeader>
-            <DialogTitle className="text-white">Confirm Room Deletion</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-gray-300">
-              Are you sure you want to delete the room <strong className="text-white">"{deleteConfirm?.name}"</strong>?
-            </p>
-            <p className="text-sm text-red-400">
-              This action cannot be undone. All messages in this room will be permanently deleted.
-            </p>
-            <div className="flex gap-2">
-              <Button onClick={() => handleDeleteRoom(deleteConfirm._id)} className="gradient-btn-danger">
-                Delete Room
-              </Button>
-              <Button onClick={() => setDeleteConfirm(null)} variant="outline" className="border-white/20 text-white">
-                Cancel
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
       
       <Footer />
     </div>

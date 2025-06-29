@@ -16,11 +16,7 @@ const server = http.createServer(app);
 app.set('trust proxy', 1);
 
 // CORS configuration from environment variables
-const allowedOrigins = [
-  'http://localhost:5173',
-  'http://localhost:4173',
-  'http://localhost:3000'
-];
+const allowedOrigins = [];
 
 // Add origins from environment variable
 if (process.env.CORS_ORIGIN) {
@@ -31,7 +27,7 @@ if (process.env.CORS_ORIGIN) {
 const io = require('socket.io')(server, {
   cors: {
     origin: allowedOrigins,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
   }
@@ -74,7 +70,7 @@ app.use(cors({
     }
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
   exposedHeaders: ['Content-Range', 'X-Content-Range'],
   maxAge: 86400 // 24 hours

@@ -1,21 +1,18 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
-const auth = require('../middleware/auth');
+const { auth, adminAuth } = require('../middleware/auth');
 
 // Get all users (admin only) - must come before parameterized routes
-router.get('/', auth, async (req, res) => {
+router.get('/', adminAuth, async (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ msg: 'Access denied. Admin only.' });
-    }
+    console.log('Admin accessing users list:', { userId: req.user.userId, role: req.user.role });
     
     const users = await User.find().select('username email role createdAt lastLogin');
     res.json(users);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('Error fetching users:', err);
+    res.status(500).json({ msg: 'Server Error' });
   }
 });
 
@@ -28,18 +25,19 @@ router.get('/:id', auth, async (req, res) => {
     }
     res.json(user);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('Error fetching user:', err);
+    res.status(500).json({ msg: 'Server Error' });
   }
 });
 
 // Delete user (admin only)
-router.delete('/:id', auth, async (req, res) => {
+router.delete('/:id', adminAuth, async (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ msg: 'Access denied. Admin only.' });
-    }
+    console.log('Admin deleting user:', { 
+      adminId: req.user.userId, 
+      adminRole: req.user.role, 
+      targetUserId: req.params.id 
+    });
 
     const user = await User.findById(req.params.id);
     if (!user) {
@@ -54,18 +52,20 @@ router.delete('/:id', auth, async (req, res) => {
     await User.findByIdAndDelete(req.params.id);
     res.json({ msg: 'User deleted successfully' });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('Error deleting user:', err);
+    res.status(500).json({ msg: 'Server Error' });
   }
 });
 
 // Update user role (admin only)
-router.patch('/:id/role', auth, async (req, res) => {
+router.patch('/:id/role', adminAuth, async (req, res) => {
   try {
-    // Check if user is admin
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ msg: 'Access denied. Admin only.' });
-    }
+    console.log('Admin updating user role:', { 
+      adminId: req.user.userId, 
+      adminRole: req.user.role, 
+      targetUserId: req.params.id,
+      newRole: req.body.role 
+    });
 
     const { role } = req.body;
     if (!['user', 'admin'].includes(role)) {
@@ -85,10 +85,11 @@ router.patch('/:id/role', auth, async (req, res) => {
     user.role = role;
     await user.save();
     
+    console.log('User role updated successfully:', { userId: user._id, newRole: user.role });
     res.json({ msg: 'User role updated successfully', user });
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send('Server Error');
+    console.error('Error updating user role:', err);
+    res.status(500).json({ msg: 'Server Error' });
   }
 });
 

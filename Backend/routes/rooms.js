@@ -1,7 +1,7 @@
 const express = require('express');
 const Room = require('../models/Room');
 const Message = require('../models/Message');
-const auth = require('../middleware/auth');
+const { auth } = require('../middleware/auth');
 
 const router = express.Router();
 

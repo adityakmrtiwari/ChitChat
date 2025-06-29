@@ -14,7 +14,7 @@ const Footer = () => (
     </div>
     <div className="flex gap-4 sm:gap-6 mt-2 sm:mt-0">
       <a 
-        href="https://github.com/" 
+        href="https://github.com/adityakmrtiwari/ChitChat" 
         target="_blank" 
         rel="noopener noreferrer" 
         className="text-gray-300 hover:text-white font-medium transition-colors duration-200 text-xs sm:text-sm"
