@@ -16,6 +16,7 @@ const Register = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState({});
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -23,18 +24,61 @@ const Register = () => {
     if (user) navigate('/rooms');
   }, [user, navigate]);
 
+  // Client-side validation
+  const validateForm = () => {
+    const errors = {};
+    
+    // Username validation
+    if (username.length < 3) {
+      errors.username = 'Username must be at least 3 characters long';
+    } else if (username.length > 30) {
+      errors.username = 'Username must be less than 30 characters';
+    }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+    
+    // Password validation
+    if (password.length < 6) {
+      errors.password = 'Password must be at least 6 characters long';
+    }
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
     setSuccess('');
+    setValidationErrors({});
+    
+    // Client-side validation
+    if (!validateForm()) {
+      setIsLoading(false);
+      return;
+    }
     
     try {
-      await api.post(API_ENDPOINTS.AUTH.REGISTER, { username, email, password });
+      const response = await api.post(API_ENDPOINTS.AUTH.REGISTER, { username, email, password });
       setSuccess('Registration successful! Please login.');
       setTimeout(() => navigate('/login'), 1500);
     } catch (err) {
-      setError(err.response?.data?.msg || 'Registration failed');
+      if (err.response?.data?.errors) {
+        // Handle validation errors from backend
+        const backendErrors = {};
+        err.response.data.errors.forEach(error => {
+          backendErrors[error.path] = error.msg;
+        });
+        setValidationErrors(backendErrors);
+        setError('Please fix the validation errors below.');
+      } else {
+        setError(err.response?.data?.msg || 'Registration failed');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -76,12 +120,23 @@ const Register = () => {
                 >
                   <Input
                     type="text"
-                    placeholder="Choose a username"
+                    placeholder="Choose a username (3-30 characters)"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
-                    className="bg-blue-900/20 border-blue-700/50 text-white placeholder:text-gray-400 focus:border-blue-500/50 focus:ring-blue-500/50 h-11 sm:h-12 text-sm sm:text-base"
+                    className={`bg-blue-900/20 border-blue-700/50 text-white placeholder:text-gray-400 focus:border-blue-500/50 focus:ring-blue-500/50 h-11 sm:h-12 text-sm sm:text-base ${
+                      validationErrors.username ? 'border-red-500/50 focus:border-red-500/50' : ''
+                    }`}
                   />
+                  {validationErrors.username && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-red-400 text-xs mt-1"
+                    >
+                      {validationErrors.username}
+                    </motion.p>
+                  )}
                 </motion.div>
                 
                 <motion.div
@@ -95,8 +150,19 @@ const Register = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className="bg-blue-900/20 border-blue-700/50 text-white placeholder:text-gray-400 focus:border-blue-500/50 focus:ring-blue-500/50 h-11 sm:h-12 text-sm sm:text-base"
+                    className={`bg-blue-900/20 border-blue-700/50 text-white placeholder:text-gray-400 focus:border-blue-500/50 focus:ring-blue-500/50 h-11 sm:h-12 text-sm sm:text-base ${
+                      validationErrors.email ? 'border-red-500/50 focus:border-red-500/50' : ''
+                    }`}
                   />
+                  {validationErrors.email && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-red-400 text-xs mt-1"
+                    >
+                      {validationErrors.email}
+                    </motion.p>
+                  )}
                 </motion.div>
                 
                 <motion.div
@@ -106,12 +172,23 @@ const Register = () => {
                 >
                   <Input
                     type="password"
-                    placeholder="Create a password"
+                    placeholder="Create a password (min 6 characters)"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
-                    className="bg-blue-900/20 border-blue-700/50 text-white placeholder:text-gray-400 focus:border-blue-500/50 focus:ring-blue-500/50 h-11 sm:h-12 text-sm sm:text-base"
+                    className={`bg-blue-900/20 border-blue-700/50 text-white placeholder:text-gray-400 focus:border-blue-500/50 focus:ring-blue-500/50 h-11 sm:h-12 text-sm sm:text-base ${
+                      validationErrors.password ? 'border-red-500/50 focus:border-red-500/50' : ''
+                    }`}
                   />
+                  {validationErrors.password && (
+                    <motion.p
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="text-red-400 text-xs mt-1"
+                    >
+                      {validationErrors.password}
+                    </motion.p>
+                  )}
                 </motion.div>
                 
                 {error && (

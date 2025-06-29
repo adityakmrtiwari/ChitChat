@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
@@ -12,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { useAuth } from '../context/AuthContext';
 import dayjs from 'dayjs';
 import { Copy, Users, Crown, Trash2, MessageSquare } from 'lucide-react';
+import api, { API_ENDPOINTS } from '../lib/api';
 
 const AdminPanel = () => {
   const [rooms, setRooms] = useState([]);
@@ -22,30 +22,25 @@ const AdminPanel = () => {
   const [copySuccess, setCopySuccess] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const navigate = useNavigate();
-  const { user } = useAuth();
-
-  const token = localStorage.getItem('token');
+  const { user, logout } = useAuth();
 
   useEffect(() => {
-    if (!token || !user || user.role !== 'admin') {
+    if (!user || user.role !== 'admin') {
       navigate('/');
       return;
     }
     fetchData();
-  }, [token, user, navigate]);
+  }, [user, navigate]);
 
   const fetchData = async () => {
+    setIsLoading(true);
     try {
-      const [roomsRes, usersRes] = await Promise.all([
-        axios.get('http://localhost:8000/api/rooms', {
-          headers: { Authorization: `Bearer ${token}` }
-        }),
-        axios.get('http://localhost:8000/api/users', {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+      const [roomsResponse, usersResponse] = await Promise.all([
+        api.get(API_ENDPOINTS.ROOMS.LIST),
+        api.get(API_ENDPOINTS.USERS.LIST)
       ]);
-      setRooms(roomsRes.data);
-      setUsers(usersRes.data);
+      setRooms(roomsResponse.data);
+      setUsers(usersResponse.data);
     } catch (err) {
       setError('Failed to fetch data');
     } finally {
@@ -53,11 +48,11 @@ const AdminPanel = () => {
     }
   };
 
-  const deleteRoom = async (roomId) => {
+  const handleDeleteRoom = async (roomId) => {
+    if (!window.confirm('Are you sure you want to delete this room?')) return;
+    
     try {
-      await axios.delete(`http://localhost:8000/api/rooms/${roomId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(API_ENDPOINTS.ROOMS.DELETE(roomId));
       setRooms(prev => prev.filter(room => room._id !== roomId));
       setDeleteConfirm(null);
     } catch (err) {
@@ -65,24 +60,20 @@ const AdminPanel = () => {
     }
   };
 
-  const deleteUser = async (userId) => {
+  const handleDeleteUser = async (userId) => {
+    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    
     try {
-      await axios.delete(`http://localhost:8000/api/users/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.delete(API_ENDPOINTS.USERS.DELETE(userId));
       setUsers(prev => prev.filter(user => user._id !== userId));
     } catch (err) {
       setError('Failed to delete user');
     }
   };
 
-  const updateUserRole = async (userId, newRole) => {
+  const handleUpdateUserRole = async (userId, newRole) => {
     try {
-      await axios.patch(`http://localhost:8000/api/users/${userId}/role`, {
-        role: newRole
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.patch(API_ENDPOINTS.USERS.UPDATE_ROLE(userId), { role: newRole });
       setUsers(prev => prev.map(user => 
         user._id === userId ? { ...user, role: newRole } : user
       ));
@@ -335,14 +326,14 @@ const AdminPanel = () => {
                               <div className="flex gap-2">
                                 <Button
                                   size="sm"
-                                  onClick={() => updateUserRole(userItem._id, userItem.role === 'admin' ? 'user' : 'admin')}
+                                  onClick={() => handleUpdateUserRole(userItem._id, userItem.role === 'admin' ? 'user' : 'admin')}
                                   className="gradient-btn-secondary"
                                 >
                                   {userItem.role === 'admin' ? 'Remove Admin' : 'Make Admin'}
                                 </Button>
                                 <Button
                                   size="sm"
-                                  onClick={() => deleteUser(userItem._id)}
+                                  onClick={() => handleDeleteUser(userItem._id)}
                                   className="gradient-btn-danger"
                                 >
                                   <Trash2 className="w-3 h-3" />
@@ -420,7 +411,7 @@ const AdminPanel = () => {
               This action cannot be undone. All messages in this room will be permanently deleted.
             </p>
             <div className="flex gap-2">
-              <Button onClick={() => deleteRoom(deleteConfirm._id)} className="gradient-btn-danger">
+              <Button onClick={() => handleDeleteRoom(deleteConfirm._id)} className="gradient-btn-danger">
                 Delete Room
               </Button>
               <Button onClick={() => setDeleteConfirm(null)} variant="outline" className="border-white/20 text-white">

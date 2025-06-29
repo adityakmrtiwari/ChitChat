@@ -1,19 +1,46 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import io from 'socket.io-client';
 import { useAuth } from '../context/AuthContext';
-
-// Import components
-import ChatHeader from '../components/ChatHeader';
-import ChatSidebar from '../components/ChatSidebar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { 
+  Send, 
+  Users, 
+  Crown, 
+  Copy, 
+  Check, 
+  Share2, 
+  LogOut, 
+  Settings,
+  MessageCircle,
+  Lock,
+  Globe,
+  Shield,
+  ArrowLeft,
+  Menu,
+  X,
+  Trash2,
+  UserMinus
+} from 'lucide-react';
+import dayjs from 'dayjs';
+import socketManager from '../lib/socket';
+import api, { API_ENDPOINTS } from '../lib/api';
 import MessageBubble from '../components/MessageBubble';
 import MessageInput from '../components/MessageInput';
+import ChatSidebar from '../components/ChatSidebar';
 import TypingIndicator from '../components/TypingIndicator';
-import { Button } from '@/components/ui/button';
+import ChatHeader from '../components/ChatHeader';
+import EmojiPicker from '../components/EmojiPicker';
+import Footer from '../components/Footer';
 
-const SOCKET_URL = 'http://localhost:8000';
+// Socket URL from environment variable
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || 'http://localhost:8000';
 
 const Chat = () => {
   const { roomId } = useParams();

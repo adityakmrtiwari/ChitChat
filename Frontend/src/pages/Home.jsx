@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,9 +12,10 @@ import { Copy, Share2, Users, Crown, Check } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import dayjs from 'dayjs';
+import api, { API_ENDPOINTS } from '../lib/api';
 
 const Home = () => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [rooms, setRooms] = useState([]);
   const [newRoomName, setNewRoomName] = useState('');
@@ -59,15 +59,21 @@ const Home = () => {
     }
   }, [user]);
 
+  // Debug: Log API configuration (remove in production)
+  useEffect(() => {
+    console.log('API Configuration:', {
+      VITE_API_URL: import.meta.env.VITE_API_URL,
+      VITE_SOCKET_URL: import.meta.env.VITE_SOCKET_URL,
+      currentUser: user
+    });
+  }, [user]);
+
   const fetchRooms = async () => {
     if (!user) return;
     
     setIsLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get('http://localhost:8000/api/rooms', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const response = await api.get(API_ENDPOINTS.ROOMS.LIST);
       setRooms(response.data);
     } catch (err) {
       setError('Failed to fetch rooms');
@@ -81,11 +87,7 @@ const Home = () => {
     if (!newRoomName.trim()) return;
 
     try {
-      const token = localStorage.getItem('token');
-      await axios.post('http://localhost:8000/api/rooms', 
-        { name: newRoomName },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
+      await api.post(API_ENDPOINTS.ROOMS.CREATE, { name: newRoomName });
       setNewRoomName('');
       fetchRooms();
     } catch (err) {
@@ -134,11 +136,8 @@ const Home = () => {
   const handleJoinRoomByCode = async () => {
     if (!joinRoomCode.trim() || !joinRoomTarget) return;
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('http://localhost:8000/api/rooms/join-by-code', {
+      const response = await api.post(API_ENDPOINTS.ROOMS.JOIN_BY_CODE, {
         roomCode: joinRoomCode
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
       setShowCodeDialog(false);
       setJoinRoomCode('');

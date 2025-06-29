@@ -12,6 +12,9 @@ require('./config/auth')(passport);
 const app = express();
 const server = http.createServer(app);
 
+// Trust proxy for rate limiting behind load balancers
+app.set('trust proxy', 1);
+
 // CORS configuration from environment variables
 const allowedOrigins = [
   'http://localhost:5173',
@@ -58,10 +61,15 @@ app.use(cors({
     // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    // Remove trailing slash from origin for comparison
+    const cleanOrigin = origin.replace(/\/$/, '');
+    
+    if (allowedOrigins.includes(cleanOrigin)) {
       callback(null, true);
     } else {
       console.log('CORS blocked origin:', origin);
+      console.log('Clean origin:', cleanOrigin);
+      console.log('Allowed origins:', allowedOrigins);
       callback(new Error('Not allowed by CORS'));
     }
   },
@@ -86,6 +94,15 @@ app.get('/health', (req, res) => {
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV,
     corsOrigins: allowedOrigins
+  });
+});
+
+// Debug endpoint to check CORS configuration
+app.get('/debug/cors', (req, res) => {
+  res.status(200).json({
+    allowedOrigins: allowedOrigins,
+    corsOriginEnv: process.env.CORS_ORIGIN,
+    nodeEnv: process.env.NODE_ENV
   });
 });
 
