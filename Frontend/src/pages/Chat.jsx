@@ -38,6 +38,7 @@ import TypingIndicator from '../components/TypingIndicator';
 import ChatHeader from '../components/ChatHeader';
 import EmojiPicker from '../components/EmojiPicker';
 import Footer from '../components/Footer';
+import LoadingSkeleton from '../components/LoadingSkeleton';
 
 const Chat = () => {
   const { roomId } = useParams();
@@ -62,6 +63,7 @@ const Chat = () => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [lastMessageAction, setLastMessageAction] = useState('new');
+  const [showEmoji, setShowEmoji] = useState(false);
   
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -271,6 +273,14 @@ const Chat = () => {
       ));
     });
 
+    socket.on('removeUser', ({ userId }) => {
+      setUsers(prev => prev.filter(u => u._id !== userId));
+    });
+
+    socket.on('roomUpdated', ({ roomData }) => {
+      setRoomName(roomData.name);
+    });
+
     return () => {
       if (socketRef.current) {
         socketRef.current.disconnect();
@@ -316,134 +326,108 @@ const Chat = () => {
     }
   };
 
+  // Copy message
+  const handleCopyMessage = async (content) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setToast('Message copied!');
+      setTimeout(() => setToast(''), 1500);
+    } catch (err) {
+      setToast('Failed to copy message');
+      setTimeout(() => setToast(''), 1500);
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 relative overflow-hidden">
-        {/* Animated Background Elements */}
-        <div className="fixed inset-0 -z-10">
-          <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
-          <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-full blur-3xl animate-spin-slow"></div>
-        </div>
-
-        <div className="text-white text-xl">Loading chat...</div>
-      </div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 relative overflow-hidden"
+      >
+        <div className="text-white text-xl mb-4">Loading chat...</div>
+        <LoadingSkeleton count={8} />
+      </motion.div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-black to-gray-900 relative overflow-hidden">
-      {/* Animated Background Elements */}
-      <div className="fixed inset-0 -z-10">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-gradient-to-r from-blue-500/5 to-purple-500/5 rounded-full blur-3xl animate-spin-slow"></div>
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-gray-800 relative overflow-hidden"
+    >
+      <div className="sticky top-0 z-30">
+        <ChatHeader
+          roomName={roomName}
+          roomCode={roomCode}
+          users={users}
+          onlineUsers={onlineUsers}
+          currentUserId={user?.userId}
+          roomOwner={roomOwner}
+          isAdmin={isAdmin}
+          isConnected={isConnected}
+          onRemoveUser={removeUser}
+          onEditRoom={handleEditRoom}
+          onCopyRoomCode={handleCopyRoomCode}
+          onSidebarToggle={() => setSidebarOpen(true)}
+        />
       </div>
-
-      {/* Chat Header */}
-      <ChatHeader
-        roomName={roomName}
-        roomCode={roomCode}
-        users={users}
-        onlineUsers={onlineUsers}
-        currentUserId={user.userId}
-        roomOwner={roomOwner}
-        isAdmin={isAdmin}
-        isConnected={isConnected}
-        onRemoveUser={removeUser}
-        onEditRoom={handleEditRoom}
-        onCopyRoomCode={handleCopyRoomCode}
-        onSidebarToggle={() => setSidebarOpen(true)}
-      />
-
-      {/* Messages Container */}
-      <div className="pt-16 sm:pt-20 pb-20 sm:pb-24 px-2 sm:px-4 md:px-6 relative">
-        <div className="max-w-4xl mx-auto w-full">
-          <motion.div 
-            ref={messagesContainerRef}
-            className="space-y-3 sm:space-y-4 min-h-[calc(100vh-180px)] sm:min-h-[calc(100vh-200px)] overflow-y-auto scrollbar-hide"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            {/* Load More Button */}
+      {/* Full width chat area */}
+      <div className="pt-16 pb-24 px-0 h-full w-full flex flex-col">
+        {isLoading ? (
+          <div className="text-white text-center py-8">Loading...</div>
+        ) : (
+          <div ref={messagesContainerRef} className="flex-1 flex flex-col justify-end space-y-2 min-h-[60vh] w-full px-2 md:px-8 lg:px-16">
             {skip < total && (
-              <div className="flex justify-center mb-2">
-                <Button
+              <div className="flex justify-center mb-2 mt-6">
+                <button
                   onClick={handleLoadMore}
                   disabled={loadingMore}
-                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-full shadow-lg"
+                  className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 text-white px-6 py-2 rounded-full shadow-lg hover:bg-gray-700 transition-all border border-white/10 font-semibold text-base"
                 >
                   {loadingMore ? 'Loading...' : 'Load More'}
-                </Button>
+                </button>
               </div>
             )}
             <AnimatePresence>
-              {messages.map((msg, index) => (
-                <motion.div
-                  key={msg._id}
-                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  transition={{ 
-                    duration: 0.3, 
-                    delay: index * 0.05,
-                    ease: "easeOut"
-                  }}
-                >
+              {messages.map((msg, index) => {
+                const prevMsg = messages[index - 1];
+                // Group if previous message is from the same sender and within 5 minutes
+                let isGrouped = false;
+                if (
+                  prevMsg &&
+                  prevMsg.sender &&
+                  msg.sender &&
+                  prevMsg.sender._id === msg.sender._id &&
+                  Math.abs(new Date(msg.createdAt) - new Date(prevMsg.createdAt)) < 5 * 60 * 1000
+                ) {
+                  isGrouped = true;
+                }
+                return (
                   <MessageBubble
+                    key={msg._id}
                     message={msg}
-                    currentUserId={user.userId}
+                    currentUserId={user?.userId}
                     roomOwner={roomOwner}
                     onAddReaction={handleAddReaction}
-                    isOwnMessage={msg.sender?._id === user.userId}
-                    isAdmin={isAdmin}
-                    isRoomOwner={roomOwner === user.userId}
+                    isOwnMessage={msg.sender?._id === user?.userId}
                     onDelete={handleDeleteMessage}
+                    onCopy={handleCopyMessage}
+                    isGrouped={isGrouped}
                   />
-                </motion.div>
-              ))}
+                );
+              })}
             </AnimatePresence>
-
-            {/* Typing Indicator */}
             <TypingIndicator typingUsers={typingUsers} />
-
             <div ref={messagesEndRef} />
-          </motion.div>
-
-          {/* New Message Indicator */}
-          {newMessageCount > 0 && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.8, y: 20 }}
-              className="fixed bottom-20 sm:bottom-24 left-1/2 -translate-x-1/2 z-50"
-            >
-              <Button
-                onClick={scrollToBottom}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-full shadow-2xl transition-all duration-300 hover:scale-105 text-sm sm:text-base font-medium backdrop-blur-xl border border-blue-500/30"
-              >
-                <motion.div
-                  animate={{ y: [0, -2, 0] }}
-                  transition={{ duration: 1, repeat: Infinity }}
-                  className="mr-2"
-                >
-                  ↓
-                </motion.div>
-                {newMessageCount} new message{newMessageCount > 1 ? 's' : ''}
-              </Button>
-            </motion.div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
-
-      {/* Message Input */}
-      <MessageInput
-        onSend={handleSend}
-        disabled={!isConnected}
-        placeholder="Type your message..."
-      />
-
-      {/* Chat Sidebar */}
+      <MessageInput onSend={handleSend} onEmoji={() => setShowEmoji(v => !v)} />
+      <EmojiPicker isOpen={showEmoji} onClose={() => setShowEmoji(false)} onEmojiSelect={() => {}} />
       <ChatSidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
@@ -451,58 +435,38 @@ const Chat = () => {
         roomCode={roomCode}
         users={users}
         onlineUsers={onlineUsers}
-        currentUserId={user.userId}
+        currentUserId={user?.userId}
         roomOwner={roomOwner}
         isAdmin={isAdmin}
         onRemoveUser={removeUser}
         onEditRoom={handleEditRoom}
         onCopyRoomCode={handleCopyRoomCode}
       />
-
-      {/* Error Display */}
       {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: -20, scale: 0.95 }}
-          className="fixed top-16 sm:top-20 left-1/2 -translate-x-1/2 z-50 bg-red-500/20 backdrop-blur-xl text-red-400 px-4 sm:px-6 py-2 sm:py-3 rounded-xl border border-red-500/30 text-sm max-w-xs sm:max-w-sm mx-2 shadow-2xl"
-        >
+        <motion.div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 bg-red-500/20 backdrop-blur-xl text-red-400 px-4 py-2 rounded-xl border border-red-500/30 text-sm max-w-xs mx-2 shadow-2xl">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
             {error}
           </div>
         </motion.div>
       )}
-
-      {/* Toast Notification */}
       {toast && (
-        <motion.div
-          initial={{ opacity: 0, y: 20, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 20, scale: 0.95 }}
-          className="fixed bottom-20 sm:bottom-8 left-1/2 -translate-x-1/2 bg-black/95 backdrop-blur-xl text-white px-4 sm:px-6 py-2 sm:py-3 rounded-xl shadow-2xl border border-blue-900/50 z-50 max-w-xs sm:max-w-sm mx-2 text-sm sm:text-base"
-        >
+        <motion.div className="fixed bottom-20 left-1/2 -translate-x-1/2 bg-black/95 backdrop-blur-xl text-white px-4 py-2 rounded-xl shadow-2xl border border-blue-900/50 z-50 max-w-xs mx-2 text-sm">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
             {toast}
           </div>
         </motion.div>
       )}
-
-      {/* Connection Status Indicator */}
       {!isConnected && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="fixed top-16 sm:top-20 right-4 z-50 bg-yellow-500/20 backdrop-blur-xl text-yellow-400 px-3 sm:px-4 py-2 rounded-lg border border-yellow-500/30 text-xs sm:text-sm shadow-lg"
-        >
+        <motion.div className="fixed top-16 right-4 z-50 bg-yellow-500/20 backdrop-blur-xl text-yellow-400 px-3 py-2 rounded-lg border border-yellow-500/30 text-xs shadow-lg">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse"></div>
             Reconnecting...
           </div>
         </motion.div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

@@ -24,7 +24,7 @@ const Navbar = () => {
       initial={{ y: -100 }}
       animate={{ y: 0 }}
       transition={{ duration: 0.5 }}
-      className="w-full bg-black/95 backdrop-blur-xl border-b border-blue-900/50 text-white py-2 sm:py-3 px-3 sm:px-6 flex justify-between items-center fixed top-0 z-50"
+      className="w-full bg-black/90 backdrop-blur-xl border-b border-blue-900/50 text-white py-2 sm:py-3 px-3 sm:px-6 flex justify-between items-center fixed top-0 z-50"
     >
       <div className="flex items-center gap-2 sm:gap-4">
         {showBack && (

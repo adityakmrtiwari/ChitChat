@@ -53,7 +53,7 @@ const ChatHeader = ({
         initial={{ y: -100, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
-        className="bg-black/95 backdrop-blur-xl border-b border-blue-900/50 p-3 sm:p-4 fixed top-0 left-0 right-0 z-30 shadow-2xl"
+        className="bg-black/90 backdrop-blur-2xl border-b border-blue-900/50 p-3 sm:p-4 fixed top-0 left-0 right-0 z-30 shadow-xl"
       >
         <div className="max-w-4xl mx-auto w-full flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -65,9 +65,10 @@ const ChatHeader = ({
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate('/')}
-                className="text-gray-200 hover:text-white hover:bg-blue-500/20 transition-all duration-200 flex-shrink-0 h-9 w-9 sm:h-10 sm:w-10"
+                className="text-gray-200 hover:text-white hover:bg-blue-500/20 transition-all duration-200 flex-shrink-0 h-11 w-11 sm:h-12 sm:w-12 min-w-[44px] min-h-[44px]"
+                style={{ minWidth: 44, minHeight: 44 }}
               >
-                <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
               </Button>
             </motion.div>
             
@@ -82,12 +83,12 @@ const ChatHeader = ({
                 <span className="hidden sm:inline">•</span>
                 {isConnected ? (
                   <div className="flex items-center gap-1 text-green-400">
-                    <Wifi className="w-3 h-3" />
+                    <Wifi className="w-4 h-4" />
                     <span className="hidden sm:inline">Connected</span>
                   </div>
                 ) : (
                   <div className="flex items-center gap-1 text-red-400">
-                    <WifiOff className="w-3 h-3" />
+                    <WifiOff className="w-4 h-4" />
                     <span className="hidden sm:inline">Disconnected</span>
                   </div>
                 )}
@@ -119,9 +120,10 @@ const ChatHeader = ({
                 variant="ghost"
                 size="icon"
                 onClick={onSidebarToggle}
-                className="text-gray-200 hover:text-white hover:bg-blue-500/20 transition-all duration-200 h-9 w-9 sm:h-10 sm:w-10"
+                className="text-gray-200 hover:text-white hover:bg-blue-500/20 transition-all duration-200 h-11 w-11 sm:h-12 sm:w-12 min-w-[44px] min-h-[44px]"
+                style={{ minWidth: 44, minHeight: 44 }}
               >
-                <Users className="w-4 h-4 sm:w-5 sm:h-5" />
+                <Users className="w-5 h-5 sm:w-6 sm:h-6" />
               </Button>
             </motion.div>
 
@@ -135,9 +137,10 @@ const ChatHeader = ({
                   variant="ghost"
                   size="icon"
                   onClick={handleDeleteRoom}
-                  className="text-gray-200 hover:text-white hover:bg-blue-500/20 transition-all duration-200 h-9 w-9 sm:h-10 sm:w-10"
+                  className="text-gray-200 hover:text-white hover:bg-blue-500/20 transition-all duration-200 h-11 w-11 sm:h-12 sm:w-12 min-w-[44px] min-h-[44px]"
+                  style={{ minWidth: 44, minHeight: 44 }}
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-5 h-5" />
                 </Button>
               </motion.div>
             )}
