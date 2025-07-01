@@ -55,6 +55,13 @@ const Chat = () => {
   const [isConnected, setIsConnected] = useState(true);
   const [newMessageCount, setNewMessageCount] = useState(0);
   const [toast, setToast] = useState('');
+  // Pagination state
+  const [skip, setSkip] = useState(0);
+  const [limit] = useState(15);
+  const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [lastMessageAction, setLastMessageAction] = useState('new');
   
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -82,6 +89,7 @@ const Chat = () => {
 
       // Add the message to the local state immediately
       setMessages((prev) => [...prev, response.data]);
+      setLastMessageAction('new');
       
       // Broadcast to other users via socket
       socketRef.current.emit('broadcastMessage', { 
@@ -139,7 +147,10 @@ const Chat = () => {
       navigate('/login');
       return;
     }
-    
+    setSkip(0);
+    setMessages([]);
+    setTotal(0);
+    setIsLoading(true);
     const fetchData = async () => {
       try {
         const roomRes = await api.get(API_ENDPOINTS.ROOMS.GET(roomId));
@@ -149,18 +160,19 @@ const Chat = () => {
         setIsAdmin(user.role === 'admin');
         setUsers(room.users || []);
         setRoomCode(room.roomCode);
-        
-        const messagesRes = await api.get(API_ENDPOINTS.MESSAGES.GET(roomId));
-        setMessages(messagesRes.data);
+        // Fetch last 15 messages
+        const messagesRes = await api.get(`${API_ENDPOINTS.MESSAGES.GET(roomId)}?limit=${limit}&skip=0`);
+        setMessages(messagesRes.data.messages);
+        setTotal(messagesRes.data.total);
+        setSkip(messagesRes.data.messages.length);
       } catch (err) {
         setError('Failed to fetch room data');
       } finally {
         setIsLoading(false);
       }
     };
-    
     fetchData();
-  }, [roomId, token, user, navigate]);
+  }, [roomId, token, user, navigate, limit]);
 
   // Socket connection and event handlers
   useEffect(() => {
@@ -269,10 +281,40 @@ const Chat = () => {
     };
   }, [roomId, user, navigate]);
 
-  // Auto-scroll to bottom on new messages
+  // Auto-scroll to bottom on new messages (but not when loading more or deleting)
   useEffect(() => {
-    scrollToBottom();
+    if (lastMessageAction === 'new') {
+      scrollToBottom();
+    }
   }, [messages]);
+
+  // Load more messages
+  const handleLoadMore = async () => {
+    setLoadingMore(true);
+    setIsLoadingMore(true);
+    setLastMessageAction('loadMore');
+    try {
+      const res = await api.get(`${API_ENDPOINTS.MESSAGES.GET(roomId)}?limit=${limit}&skip=${skip}`);
+      setMessages((prev) => [...res.data.messages, ...prev]);
+      setSkip(skip + res.data.messages.length);
+    } catch (err) {
+      setError('Failed to load more messages');
+    } finally {
+      setLoadingMore(false);
+      setTimeout(() => setIsLoadingMore(false), 100);
+    }
+  };
+
+  // Delete message handler
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      const res = await api.delete(`${API_ENDPOINTS.MESSAGES.GET(roomId)}/${messageId}`);
+      setMessages((prev) => prev.map(m => m._id === messageId ? { ...m, deleted: true } : m));
+      setLastMessageAction('delete');
+    } catch (err) {
+      setError('Failed to delete message');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -324,6 +366,18 @@ const Chat = () => {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.5 }}
           >
+            {/* Load More Button */}
+            {skip < total && (
+              <div className="flex justify-center mb-2">
+                <Button
+                  onClick={handleLoadMore}
+                  disabled={loadingMore}
+                  className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-4 py-2 rounded-full shadow-lg"
+                >
+                  {loadingMore ? 'Loading...' : 'Load More'}
+                </Button>
+              </div>
+            )}
             <AnimatePresence>
               {messages.map((msg, index) => (
                 <motion.div
@@ -342,6 +396,9 @@ const Chat = () => {
                     roomOwner={roomOwner}
                     onAddReaction={handleAddReaction}
                     isOwnMessage={msg.sender?._id === user.userId}
+                    isAdmin={isAdmin}
+                    isRoomOwner={roomOwner === user.userId}
+                    onDelete={handleDeleteMessage}
                   />
                 </motion.div>
               ))}

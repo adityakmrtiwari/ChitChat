@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Heart, ThumbsUp, Smile, Crown, Copy, Check } from 'lucide-react';
+import { Heart, ThumbsUp, Smile, Crown, Copy, Check, Trash2 } from 'lucide-react';
 import dayjs from '@/lib/dayjs';
 
 const MessageBubble = ({ 
@@ -11,7 +11,10 @@ const MessageBubble = ({
   currentUserId, 
   roomOwner, 
   onAddReaction,
-  isOwnMessage = false 
+  isOwnMessage = false,
+  isAdmin = false,
+  isRoomOwner = false,
+  onDelete = () => {},
 }) => {
   const reactions = [
     { icon: <Heart className="w-4 h-4" />, value: 'heart', emoji: '❤️' },
@@ -29,6 +32,12 @@ const MessageBubble = ({
       setTimeout(() => setCopySuccess(''), 2000);
     }
   };
+
+  const canDelete = (
+    message.sender?._id === currentUserId ||
+    isAdmin ||
+    (isRoomOwner && message.sender?.role !== 'admin')
+  );
 
   return (
     <motion.div
@@ -74,13 +83,33 @@ const MessageBubble = ({
               >
                 <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
               </Button>
+              {/* Delete Message Button */}
+              {canDelete && !message.deleted && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    if (window.confirm('Are you sure you want to delete this message?')) {
+                      onDelete(message._id);
+                    }
+                  }}
+                  className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 hover:bg-red-500/10 transition-all duration-200 h-6 w-6 sm:h-8 sm:w-8 p-0"
+                  aria-label="Delete Message"
+                >
+                  <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
+                </Button>
+              )}
             </div>
             
             {/* Message Content */}
             <div className="relative">
-              <p className="text-white text-sm sm:text-base leading-relaxed break-words">
-                {message.content}
-              </p>
+              {message.deleted ? (
+                <p className="italic text-gray-400 text-sm sm:text-base">This message was deleted.</p>
+              ) : (
+                <p className="text-white text-sm sm:text-base leading-relaxed break-words">
+                  {message.content}
+                </p>
+              )}
               
               {/* Message Timestamp */}
               <div className="flex justify-between items-center mt-2 sm:mt-3">

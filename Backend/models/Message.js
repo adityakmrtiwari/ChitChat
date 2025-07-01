@@ -19,7 +19,19 @@ const MessageSchema = new mongoose.Schema({
     type: Map,
     of: String,
     default: {}
+  },
+  deleted: {
+    type: Boolean,
+    default: false
+  },
+  deletedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
   }
 }, { timestamps: true });
+
+// TTL index: delete messages 15 days (1296000 seconds) after creation
+MessageSchema.index({ createdAt: 1 }, { expireAfterSeconds: 1296000 });
 
 module.exports = mongoose.model('Message', MessageSchema);

@@ -42,15 +42,13 @@ const ChatSidebar = ({
 
   const handleRemoveUser = async (userId) => {
     if (canRemoveUser(userId)) {
-      const userToRemove = users.find(u => u._id === userId);
-      const userName = userToRemove?.username || 'this user';
-      
-      if (window.confirm(`Are you sure you want to remove ${userName} from the room?`)) {
-        try {
-          await onRemoveUser(userId);
-        } catch (err) {
-          // Error handling is done in the parent component
-        }
+      const confirm = window.confirm('Are you sure you want to remove this user from the room?');
+      if (!confirm) return;
+      try {
+        await onRemoveUser(userId);
+        window.alert('User has been removed from the room.');
+      } catch (err) {
+        // Error handling is done in the parent component
       }
     }
   };
@@ -262,26 +260,17 @@ const ChatSidebar = ({
                       )}
                       
                       {canRemoveUser(user._id) && !isCurrentUser && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-gray-400 hover:text-red-400 hover:bg-red-500/20 transition-all duration-200"
-                            >
-                              <Menu className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent className="bg-black/95 backdrop-blur-xl border border-blue-900/50 shadow-2xl">
-                            <DropdownMenuItem
-                              onClick={() => handleRemoveUser(user._id)}
-                              className="text-red-400 hover:text-red-300 hover:bg-red-500/20 cursor-pointer transition-all duration-200"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              Remove User
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="text-white hover:text-red-400 hover:bg-red-500/20 transition-all duration-200"
+                          onClick={() => {
+                            handleRemoveUser(user._id);
+                          }}
+                          aria-label="Remove User"
+                        >
+                          <span style={{ fontSize: '1.25rem', fontWeight: 'bold', lineHeight: 1 }}>&times;</span>
+                        </Button>
                       )}
                     </div>
                   </motion.div>

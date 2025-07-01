@@ -4,7 +4,6 @@ const http = require('http');
 const cors = require('cors');
 const morgan = require('morgan');
 const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
 const connectDB = require('./config/db');
 const passport = require('passport');
 require('./config/auth')(passport);
@@ -12,13 +11,8 @@ require('./config/auth')(passport);
 const app = express();
 const server = http.createServer(app);
 
-// Trust proxy for rate limiting behind load balancers
-app.set('trust proxy', 1);
-
 // CORS configuration from environment variables
 const allowedOrigins = [];
-
-// Add origins from environment variable
 if (process.env.CORS_ORIGIN) {
   const envOrigins = process.env.CORS_ORIGIN.split(',').map(origin => origin.trim());
   allowedOrigins.push(...envOrigins);
@@ -26,7 +20,7 @@ if (process.env.CORS_ORIGIN) {
 
 const io = require('socket.io')(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: process.env.NODE_ENV === 'development' ? '*' : allowedOrigins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -41,43 +35,30 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: {
-    error: 'Too many requests from this IP, please try again later.'
-  }
-});
-app.use('/api/', limiter);
-
-// CORS middleware with detailed configuration
-app.use(cors({
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    // Remove trailing slash from origin for comparison
-    const cleanOrigin = origin.replace(/\/$/, '');
-    
-    if (allowedOrigins.includes(cleanOrigin)) {
-      callback(null, true);
-    } else {
-      console.log('CORS blocked origin:', origin);
-      console.log('Clean origin:', cleanOrigin);
-      console.log('Allowed origins:', allowedOrigins);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
-  exposedHeaders: ['Content-Range', 'X-Content-Range'],
-  maxAge: 86400 // 24 hours
-}));
-
-// Pre-flight requests
-app.options('*', cors());
+// --- CORS middleware ---
+if (process.env.NODE_ENV === 'development') {
+  // Allow all origins in development for easier testing
+  app.use(cors({ origin: true, credentials: true }));
+} else {
+  // Restrict origins in production
+  app.use(cors({
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      const cleanOrigin = origin.replace(/\/$/, '');
+      if (allowedOrigins.includes(cleanOrigin)) {
+        callback(null, true);
+      } else {
+        console.log('CORS blocked origin:', origin);
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range'],
+    maxAge: 86400
+  }));
+}
 
 app.use(express.json({ limit: '10mb' }));
 app.use(morgan('dev'));

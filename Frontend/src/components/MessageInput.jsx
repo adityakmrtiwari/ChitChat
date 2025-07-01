@@ -74,7 +74,7 @@ const MessageInput = ({ onSend, disabled = false, placeholder = "Type your messa
               value={input}
               onChange={handleInputChange}
               onKeyPress={handleKeyPress}
-              className="h-10 sm:h-12 bg-gradient-to-r from-blue-900/20 to-purple-900/20 border-blue-700/50 text-white placeholder:text-gray-400 focus:ring-2 focus:ring-blue-500/50 transition-all duration-200 text-sm sm:text-base rounded-xl backdrop-blur-sm"
+              className="h-10 sm:h-12 bg-gradient-to-r from-blue-900/20 to-purple-900/20 border-blue-700/50 text-black placeholder:text-black focus:ring-2 focus:ring-blue-500/50 transition-all duration-200 text-sm sm:text-base rounded-xl backdrop-blur-sm"
               disabled={disabled}
             />
           </div>
